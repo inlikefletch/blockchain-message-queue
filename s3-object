@@ -1,6 +1,6 @@
 <script src="https://sdk.amazonaws.com/js/aws-sdk-2.6.4.min.js"></script>
 <script>
-	AWS.config.update({accessKeyId:'ABCDEFGHIJKLMNOP', secretAccessKey:'dNqbgCafEqCS1sJBpgD1zonb0I0Gk1c632HV6ju1'});
+	AWS.config.update({accessKeyId:'ABCDEFGHIJKLMNOP', secretAccessKey:'abcdefghijklmnopqrs1234567890'});
 	AWS.config.region = 'us-west-2';
 </script>
 <script>
