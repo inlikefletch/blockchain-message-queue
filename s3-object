@@ -1,0 +1,59 @@
+<script src="https://sdk.amazonaws.com/js/aws-sdk-2.6.4.min.js"></script>
+<script>
+	AWS.config.update({accessKeyId:'AKIAJLPDZBZYKY24D3CA', secretAccessKey:'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'});
+	AWS.config.region = 'us-west-2';
+</script>
+<script>
+    function signUp(){
+      document.getElementById("authForm").style.display = "none";
+      var user = document.getElementById('user').value;
+      var pwd = document.getElementById('pwd').value;
+      var lambda = new AWS.Lambda();
+      var params = {
+      FunctionName: 'sns-auth',
+      Payload: '{"user":"'+user+'","pwd":"'+pwd+'","action":"signup"}'
+      };
+      lambda.invoke(params, function(err, data) {
+        if (err) {
+          window.location = "/error";
+        }
+        else {
+          response = data.Payload;
+          response = response.replace(/"/g, "");
+          console.log(response);
+          document.getElementById("response").innerHTML = response;
+        }
+      });
+      return false;
+    }
+    function logIn(){
+      document.getElementById("authForm").style.display = "none";
+      var user = document.getElementById('user').value;
+      var pwd = document.getElementById('pwd').value;
+      var lambda = new AWS.Lambda();
+      var params = {
+      FunctionName: 'sns-auth',
+      Payload: '{"user":"'+user+'","pwd":"'+pwd+'","action":"login"}'
+      };
+      lambda.invoke(params, function(err, data) {
+        if (err) {
+          window.location = "/error";
+        }
+        else {
+          response = data.Payload;
+          response = response.replace(/"/g, "");
+          console.log(response);
+          document.getElementById("response").innerHTML = response;
+        }
+      });
+      return false;
+    }
+</script>
+<img id="anigif" src="/gif-load" style="display:none">
+<form id="authForm">
+	Username: <input type="text" id="user"/><br>
+	Password: <input type="password" id="pwd"/><br>
+	<input type="button" id="signUpButton" value="Sign up" onclick="signUp();">
+	<input type="button" id="logInButton" value="Log in" onclick="logIn();">
+</form>
+<a id="response"></a>
