@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<script src="https://sdk.amazonaws.com/js/aws-sdk-2.6.4.min.js"></script>
+<script src="js/cryptico.js"></script>
+<script src="js/md5.min.js"></script>
+<script>
+	AWS.config.update({accessKeyId:'', secretAccessKey:''});
+	AWS.config.region = '';
+</script>
+<script>
+    function auth(){
+		document.getElementById("authForm").style.display = "none";
+		var username = document.getElementById('username').value;
+		var pwd = document.getElementById('pwd').value;
+		var usernameMd5 = md5(username);
+		window.usernameMd5 = usernameMd5;
+		var pwdMd5 = md5(pwd);
+		var bits = 1024;
+		var passPhrase = usernameMd5+pwdMd5;
+		var privateKey = cryptico.generateRSAKey(passPhrase, bits);
+		window.privateKey = privateKey;
+		var publicKey = cryptico.publicKeyString(privateKey);
+		window.publicKey = publicKey;
+		var lambda = new AWS.Lambda();
+		var params = {
+			FunctionName: 'bcmq-auth',
+			Payload: '{"usernameMd5":"'+usernameMd5+'","publicKey":"'+publicKey+'"}'
+		};
+		lambda.invoke(params, function(err, data) {
+			if (err) {
+				console.log(err)
+				window.location = "/error";
+			}
+			else {
+				response = data.Payload;
+				response = response.replace(/"/g, "");
+				console.log(response);
+				if (response === 'signUpSuccess' || response === 'loginSuccess') {
+					document.getElementById("anigif").style.display = "none";
+					document.getElementById("getUserForm").style.display = "block";
+					document.getElementById("getMessages").style.display = "block";
+					document.getElementById("response").innerHTML = 'Hello, ' + username;
+				} else {
+					document.getElementById("authForm").style.display = "block";
+					document.getElementById("response").innerHTML = response
+				}
+			}
+		});
+		return false;
+	}
+	function getUser(){
+		document.getElementById("getUserForm").style.display = "none";
+		document.getElementById("getMessages").style.display = "none";
+		
+		var user = document.getElementById('user').value;
+		var userMd5 = md5(user);
+		window.toUserMd5 = userMd5;
+		var lambda = new AWS.Lambda();
+		var params = {
+			FunctionName: 'bcmq-get-user',
+			Payload: '{"userMd5":"'+userMd5+'"}'
+		};
+		lambda.invoke(params, function(err, data) {
+			if (err) {
+				console.log(err)
+				window.location = "/error";
+			}
+			else {
+				response = data.Payload;
+				response = response.replace(/"/g, "");
+				console.log(response);
+				if (response == 'userDoesNotExist'){
+					document.getElementById("anigif").style.display = "none";
+					document.getElementById("getUserForm").style.display = "block";
+					document.getElementById("messageForm").style.display = "block";
+					document.getElementById('user').value = response;
+				} else {
+					window.destinationPublicKey = response;
+					console.log(destinationPublicKey);
+					document.getElementById("anigif").style.display = "none";
+					document.getElementById('user').disabled = true;
+					document.getElementById("getUserButton").style.display="none";
+					document.getElementById("getUserForm").style.display = "block";
+					document.getElementById("messageForm").style.display = "block";
+					document.getElementById("getMessages").style.display = "block";
+				}
+			}
+		});
+		return false;
+	}
+    function encrypt(){
+    	document.getElementById("getUserForm").style.display = "none";
+		document.getElementById("getMessages").style.display = "none";
+		document.getElementById("messageForm").style.display = "none";
+		
+		var message = document.getElementById('message').value;
+		var EncryptionResult = cryptico.encrypt(message, window.destinationPublicKey, window.privateKey);
+		console.log(EncryptionResult);
+		var cipher = EncryptionResult['cipher']
+		var lambda = new AWS.Lambda();
+		var params = {
+			FunctionName: 'bcmq-post-message',
+			Payload: '{"to":"'+window.toUserMd5+'","message":"'+cipher+'"}'
+		};
+		lambda.invoke(params, function(err, data) {
+			if (err) {
+				console.log(err)
+				window.location = "/error";
+			}
+			else {
+				response = data.Payload;
+				response = response.replace(/"/g, "");
+				console.log(response);
+				if (response == 'successfulMessagePost'){
+					document.getElementById("messagePostResponse").innerHTML = response + "<br>";
+				} else {
+					document.getElementById("messagePostResponse").innerHTML = "messagePostFailure";
+				}
+				document.getElementById("anigif").style.display = "none";
+				document.getElementById('message').value = "";
+				document.getElementById("getUserForm").style.display = "block";
+				document.getElementById("getUserButton").style.display = "block";
+				document.getElementById("messageForm").style.display = "none";
+				document.getElementById("getMessages").style.display = "block";
+				document.getElementById('user').value = "";
+				document.getElementById('user').disabled = false;
+			}
+		});
+		return false;
+	}
+    function getMessages(){
+		
+		document.getElementById("getMessages").style.display = "none";
+		document.getElementById("getUserForm").style.display = "none";
+		var lambda = new AWS.Lambda();
+		var params = {
+			FunctionName: 'bcmq-get-messages',
+			Payload: '{"to":"'+window.usernameMd5+'"}'
+		};
+		lambda.invoke(params, function(err, data) {
+			if (err) {
+				console.log(err)
+				window.location = "/error";
+			}
+			else {
+				var table = document.getElementById("messages");
+				//table.innerHTML = '<table>';
+				table.innerHTML = '<tr><th>From</th><th>Message</th></tr>';
+				response = data.Payload;
+				response = response.replace(/"/g, "");
+				response = response.slice(1, -1);
+				console.log(response);
+				var objects = response.split(',');
+				for (i = 0; i < objects.length; i++) {
+					var decrypted = cryptico.decrypt(objects[i], window.privateKey);
+					console.log(decrypted);
+					var plaintext = decrypted['plaintext'];
+					var from = decrypted['publicKeyString'];
+					table.innerHTML += '<tr><td style="white-space:pre-wrap;white-space:-moz-pre-wrap;white-space:-pre-wrap;white-space:-o-pre-wrap;word-wrap:break-word">'+from+'</td><td>'+plaintext+'</td></tr>';
+				}
+				//build table from, time, message
+				//table.innerHTML += '</table>';
+				document.getElementById("anigif").style.display = "none";
+				document.getElementById("getMessages").style.display = "block";
+				document.getElementById("getUserForm").style.display = "block";
+				//for each message in response, decrypt ciper
+			}
+		});
+		return false;
+	}
+</script>
+<style>
+	table {border-collapse: collapse;}
+	table, td, th {border: 1px solid black; white-space: pre-wrap; white-space: -o-pre-wrap; white-space: -pre-wrap;}
+</style>
+<body>
+<b>Blockchain Message Queue</b><a> - </a><a href="http://bcmq.tk.s3-website-us-west-2.amazonaws.com/blockchain">click here to see the blockchain</a><br>
+<a id="response"></a>
+<img id="anigif" src="/gif-load" style="display:none">
+<form id="authForm">
+	Username: <input type="text" id="username" value=""/><br>
+	Password: <input type="password" id="pwd" value=""/><br>
+	<input type="button" id="authButton" value="sign up/login" onclick="auth();">
+</form>
+<form id="getUserForm" style="display:none">
+	<hr>
+	<a id="messagePostResponse"></a>
+	Send message to: <input type="text" id="user" value=""/><br>
+	<input type="button" id="getUserButton" value="get user public key" onclick="getUser();">
+</form>
+<form id="messageForm" style="display:none">
+	Message: <input type="text" id="message" value=""/><br>
+	<input type="button" value="send message" onclick="encrypt();">
+</form>
+<form id="getMessages" style="display:none">
+	<hr>
+	<input type="button" value="get messages" onclick="getMessages();">
+</form>
+<table id="messages" style="table-layout:fixed; width:100%"></table>
+</body>
+</html>

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<script src="https://sdk.amazonaws.com/js/aws-sdk-2.6.4.min.js"></script>
+<script>
+	AWS.config.update({accessKeyId:'', secretAccessKey:''});
+	AWS.config.region = '';
+</script>
+<script>
+    function getBlockchain(){
+		var lambda = new AWS.Lambda();
+		var params = {
+			FunctionName: 'bcmq-get-blockchain',
+			Payload: '{"null":"null"}'
+		};
+		lambda.invoke(params, function(err, data) {
+			if (err) {
+				console.log(err)
+				window.location = "/error";
+			}
+			else {
+				var table = document.getElementById("blockchain");
+				response = data.Payload;
+				response = response.replace(/"/g, "");
+				response = response.slice(1, -1);
+				response = response.replace(/\s/g, "");
+				console.log(response);
+				var objects = response.split(',');
+				for (i = 0; i < objects.length; i++) {
+					table.innerHTML += '<tr><td style="white-space:pre-wrap;white-space:-moz-pre-wrap;white-space:-pre-wrap;white-space:-o-pre-wrap;word-wrap:break-word">'+objects[i]+'</td></tr>';
+				}
+			}
+		});
+		return false;
+	}
+</script>
+<style>
+	table {border-collapse: collapse;}
+	table, td, th {border: 1px solid black; white-space: pre-wrap; white-space: -o-pre-wrap; white-space: -pre-wrap;}
+</style>
+<body onload="getBlockchain()">
+<b>Blockchain Message Queue</b><a> - </a><a href="http://bcmq.tk.s3-website-us-west-2.amazonaws.com">home</a>
+<table id="blockchain" style="table-layout:fixed; width:100%"></table>
+</body>
+</html>
