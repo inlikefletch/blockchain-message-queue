@@ -1,12 +1,13 @@
-# db-hack-aws-sns
+# blockchain-message-queue
 
-The following documents a free database solution hack using AWS SNS as the backend. Using SNS topics as database objects allows for a free database solution. Please note, AWS SNS has a 100,000 topic limit.
+The following documents development of a message queue service using RSA encryption and blockchain technology.
 
-The following example uses a S3 javascript object as the front end and a Lambda function as the application layer. This is a very basic authenication applicaiotn as an example. Please note I do a daily clean up of accounts at midnight UTC.
+Sign up/login generates 1024 bit RSA keys, client side, based off unique usernames and passwords. Only user public keys are posted back to the server. Message posts/gets uses the desired public key and client side private key to encrypt/decrypt messages. Encrypted messages are sent to a decentralized, open blockchain database.
 
-http://sns-auth.s3-website-us-west-2.amazonaws.com
+Demo:
+http://bcmq.tk
+
+(working on securing demo with SSL)
 
 Questions or comments:
 jason@solvingnet.com
-
-P.S. working on posting AWS Cloudformation templates.
